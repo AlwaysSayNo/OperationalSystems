@@ -18,7 +18,7 @@ public class SchedulingAlgorithm {
 
     Results result = new Results("Interactive (Preemptive)", "Guaranteed", 0);
 
-    sProcess process = (sProcess) processVector.elementAt(currentProcess);
+    sProcess process = processVector.elementAt(currentProcess);
     long start = System.currentTimeMillis();
 
     try (PrintStream out = new PrintStream(new FileOutputStream(resultsFile))){
@@ -55,26 +55,27 @@ public class SchedulingAlgorithm {
           previousProcess = currentProcess;
 
           for (int i = 0; i < size; i++) {
-            process = (sProcess) processVector.elementAt(i);
+            process = processVector.elementAt(i);
             ratio = (double) process.cpuDone / ((double) compTime / size);
 
-            if (process.cpuDone < process.cpuTime && ratio < minRatio && (i != previousProcess || isPreempted)) {
+            if (process.cpuDone < process.cpuTime &&
+                    ratio < minRatio && (i != previousProcess || isPreempted)) {
               minRatio = ratio;
               currentProcess = i;
             }
           }
 
-          process = (sProcess) processVector.elementAt(currentProcess);
+          process = processVector.elementAt(currentProcess);
           out.println(getMessage("registered", process, start, currentProcess, compTime, size, needSwitch));
+
           needSwitch = false;
           isPreempted = false;
         }
 
         process.cpuDone++;
         process.preemptedNext++;
-        if (process.ioBlocking > 0) {
-          process.ioNext++;
-        }
+        if (process.ioBlocking > 0) process.ioNext++;
+
         compTime++;
       }
     } catch (IOException e) {
