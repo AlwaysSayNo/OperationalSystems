@@ -1,0 +1,10 @@
+Scheduling Type: Interactive (Preemptive)
+Scheduling Name: Guaranteed
+Simulation Run Time: 618
+Mean: 200
+Standard Deviation: 60
+Quantum: 30
+Process #	CPU Time	IO Blocking	CPU Completed	CPU Blocked	CPU Preempted
+0		195 (ms)	100 (ms)	195 (ms)	1 times		6 times
+1		225 (ms)	120 (ms)	225 (ms)	1 times		6 times
+2		198 (ms)	40 (ms)		198 (ms)	4 times		5 times

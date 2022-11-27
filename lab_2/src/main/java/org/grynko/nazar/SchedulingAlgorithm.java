@@ -1,6 +1,4 @@
-package main.java.org.grynko.nazar;// Run() is called from Scheduling.main() and is where
-// the scheduling algorithm written by the user resides.
-// User modification should occur within the Run() function.
+package main.java.org.grynko.nazar;
 
 import main.java.org.grynko.nazar.model.Results;
 import main.java.org.grynko.nazar.model.sProcess;
@@ -9,65 +7,99 @@ import java.util.Vector;
 import java.io.*;
 
 public class SchedulingAlgorithm {
-
-  public static Results Run(int runtime, Vector processVector, Results result) {
-    int i = 0;
-    int comptime = 0;
+  public static Results run(int runtime, int quantum, Vector<sProcess> processVector, String resultsFile) {
+    int compTime = 0;
     int currentProcess = 0;
-    int previousProcess = 0;
+    int previousProcess;
     int size = processVector.size();
     int completed = 0;
-    String resultsFile = "Summary-Processes";
+    boolean needSwitch = false;
+    boolean isPreempted = false;
 
-    result.schedulingType = "Batch (Nonpreemptive)";
-    result.schedulingName = "First-Come First-Served"; 
-    try {
-      //BufferedWriter out = new BufferedWriter(new FileWriter(resultsFile));
-      //OutputStream out = new FileOutputStream(resultsFile);
-      PrintStream out = new PrintStream(new FileOutputStream(resultsFile));
-      sProcess process = (sProcess) processVector.elementAt(currentProcess);
-      out.println("Process: " + currentProcess + " registered... (" + process.cputime + " " + process.ioblocking + " " + process.cpudone + " " + process.cpudone + ")");
-      while (comptime < runtime) {
-        if (process.cpudone == process.cputime) {
+    Results result = new Results("Interactive (Preemptive)", "Guaranteed", 0);
+
+    sProcess process = (sProcess) processVector.elementAt(currentProcess);
+    long start = System.currentTimeMillis();
+
+    try (PrintStream out = new PrintStream(new FileOutputStream(resultsFile))){
+      out.println(getMessage("registered", process, start, currentProcess, compTime, size, needSwitch));
+
+      while (compTime < runtime) {
+        if (process.cpuDone == process.cpuTime) {
           completed++;
-          out.println("Process: " + currentProcess + " completed... (" + process.cputime + " " + process.ioblocking + " " + process.cpudone + " " + process.cpudone + ")");
-          if (completed == size) {
-            result.compuTime = comptime;
-            out.close();
-            return result;
-          }
-          for (i = size - 1; i >= 0; i--) {
-            process = (sProcess) processVector.elementAt(i);
-            if (process.cpudone < process.cputime) { 
-              currentProcess = i;
-            }
-          }
-          process = (sProcess) processVector.elementAt(currentProcess);
-          out.println("Process: " + currentProcess + " registered... (" + process.cputime + " " + process.ioblocking + " " + process.cpudone + " " + process.cpudone + ")");
-        }      
-        if (process.ioblocking == process.ionext) {
-          out.println("Process: " + currentProcess + " I/O blocked... (" + process.cputime + " " + process.ioblocking + " " + process.cpudone + " " + process.cpudone + ")");
-          process.numblocked++;
-          process.ionext = 0; 
-          previousProcess = currentProcess;
-          for (i = size - 1; i >= 0; i--) {
-            process = (sProcess) processVector.elementAt(i);
-            if (process.cpudone < process.cputime && previousProcess != i) { 
-              currentProcess = i;
-            }
-          }
-          process = (sProcess) processVector.elementAt(currentProcess);
-          out.println("Process: " + currentProcess + " registered... (" + process.cputime + " " + process.ioblocking + " " + process.cpudone + " " + process.cpudone + ")");
-        }        
-        process.cpudone++;       
-        if (process.ioblocking > 0) {
-          process.ionext++;
+          out.println(getMessage("completed", process, start, currentProcess, compTime, size, needSwitch));
+
+          if (completed == size) break;
+
+          needSwitch = true;
         }
-        comptime++;
+        else if (process.ioBlocking == process.ioNext) {
+          out.println(getMessage("I/O blocked", process, start, currentProcess, compTime, size, needSwitch));
+
+          process.numBlocked++;
+          process.ioNext = 0;
+          process.preemptedNext = 0;
+          needSwitch = true;
+        }
+        else if (process.preemptedNext == quantum) {
+          out.println(getMessage("preempted", process, start, currentProcess, compTime, size, needSwitch));
+
+          process.numPreempted++;
+          process.preemptedNext = 0;
+          needSwitch = true;
+          isPreempted = true;
+        }
+        if (needSwitch) {
+          double ratio;
+          double minRatio = Double.MAX_VALUE;
+          previousProcess = currentProcess;
+
+          for (int i = 0; i < size; i++) {
+            process = (sProcess) processVector.elementAt(i);
+            ratio = (double) process.cpuDone / ((double) compTime / size);
+
+            if (process.cpuDone < process.cpuTime && ratio < minRatio && (i != previousProcess || isPreempted)) {
+              minRatio = ratio;
+              currentProcess = i;
+            }
+          }
+
+          process = (sProcess) processVector.elementAt(currentProcess);
+          out.println(getMessage("registered", process, start, currentProcess, compTime, size, needSwitch));
+          needSwitch = false;
+          isPreempted = false;
+        }
+
+        process.cpuDone++;
+        process.preemptedNext++;
+        if (process.ioBlocking > 0) {
+          process.ioNext++;
+        }
+        compTime++;
       }
-      out.close();
-    } catch (IOException e) { /* Handle exceptions */ }
-    result.compuTime = comptime;
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+
+    result.compuTime = compTime;
     return result;
   }
+
+  private static String getMessage(String message, sProcess process,
+                            long start, int currentProcess, int compTime, int size, boolean needSwitch) {
+      String currentRatio = "0/0";
+      if(!(message.equals("registered") && !needSwitch))
+        currentRatio = changeRation(compTime, size);
+
+      String result = "Time elapsed: " + (System.currentTimeMillis() - start) + "ms\tProcess: " + currentProcess +
+              " %s... (" + process.cpuTime + " " + process.ioBlocking + " " + process.cpuDone + " " +
+              currentRatio + ")";
+
+      return String.format(result, message);
+  }
+
+  private static String changeRation(int compTime, int size) {
+      return "(" + compTime + "/" + size + ")";
+  }
+
 }
