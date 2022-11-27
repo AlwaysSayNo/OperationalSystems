@@ -3,8 +3,6 @@ package src.main.java.org.grynko.nazar.client;
 import src.main.java.org.grynko.nazar.util.FunctionName;
 import src.main.java.org.grynko.nazar.util.Token;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;

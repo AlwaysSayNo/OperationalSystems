@@ -12,7 +12,7 @@ import java.util.Random;
 public class IntOpsWrapper {
 
     private static final double F_SOFT_FAIL_BORDER = 0.5;
-    private static final double G_SOFT_FAIL_BORDER = 0.5;
+    private static final double G_SOFT_FAIL_BORDER = 0.1;
 
     private static final Random random = new Random(10);
 
