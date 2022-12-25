@@ -26,7 +26,6 @@ public class Scheduling {
     double X = 0.0;
 
     try {
-      //BufferedReader in = new BufferedReader(new FileReader(f));
       DataInputStream in = new DataInputStream(new FileInputStream(f));
       while ((line = in.readLine()) != null) {
         if (line.startsWith("numprocess")) {
